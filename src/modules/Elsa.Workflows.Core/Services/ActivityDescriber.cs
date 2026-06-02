@@ -9,6 +9,7 @@ using Elsa.Workflows.Helpers;
 using Elsa.Workflows.Memory;
 using Elsa.Workflows.Models;
 using Elsa.Workflows.UIHints;
+using Elsa.Workflows.UIHints.Dropdown;
 using Humanizer;
 using Container = Elsa.Workflows.Activities.Container;
 
@@ -123,8 +124,43 @@ public class ActivityDescriber(IPropertyDefaultValueResolver defaultValueResolve
         var descriptionAttribute = propertyInfo.GetCustomAttribute<DescriptionAttribute>();
         var typeArgs = propertyInfo.PropertyType.GenericTypeArguments;
         var wrappedPropertyType = typeArgs.Any() ? typeArgs[0] : typeof(object);
+        var outputName = (outputAttribute?.Name ?? propertyInfo.Name).Pascalize();
+        var transformedOutputName = outputAttribute?.TransformedOutputName ?? string.Concat(outputName, "Transformed");
+        var uiSpecification = CreateOutputTransformationUiSpecification(outputAttribute);
 
-        return Task.FromResult(new OutputDescriptor((outputAttribute?.Name ?? propertyInfo.Name).Pascalize(), outputAttribute?.DisplayName ?? propertyInfo.Name.Humanize(LetterCasing.Title), wrappedPropertyType, propertyInfo.GetValue, propertyInfo.SetValue, propertyInfo, descriptionAttribute?.Description ?? outputAttribute?.Description, outputAttribute?.IsBrowsable ?? true, outputAttribute?.IsSerializable));
+        return Task.FromResult(new OutputDescriptor(
+            outputName,
+            outputAttribute?.DisplayName ?? propertyInfo.Name.Humanize(LetterCasing.Title),
+            wrappedPropertyType,
+            propertyInfo.GetValue,
+            propertyInfo.SetValue,
+            propertyInfo,
+            descriptionAttribute?.Description ?? outputAttribute?.Description,
+            outputAttribute?.IsBrowsable ?? true,
+            outputAttribute?.IsSerializable,
+            outputAttribute?.TransformationCategory,
+            outputAttribute?.DefaultTransformation,
+            transformedOutputName,
+            uiSpecification));
+    }
+
+    private static IDictionary<string, object>? CreateOutputTransformationUiSpecification(OutputAttribute? outputAttribute)
+    {
+        var options = outputAttribute?.Options as ICollection<string>;
+
+        if (options == null || options.Count == 0)
+            return null;
+
+        var selectListItems = options.Select(x => new SelectListItem(x, x)).ToList();
+        var dropdownProps = new DropDownProps
+        {
+            SelectList = new SelectList(selectListItems)
+        };
+
+        return new Dictionary<string, object>
+        {
+            [InputUIHints.DropDown] = dropdownProps
+        };
     }
 
     /// <inheritdoc />

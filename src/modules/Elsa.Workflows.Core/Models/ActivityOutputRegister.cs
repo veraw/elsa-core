@@ -34,15 +34,7 @@ public class ActivityOutputRegister
         var activityId = activityExecutionContext.Activity.Id;
         var activityInstanceId = activityExecutionContext.Id;
         var containerId = activityExecutionContext.ParentActivityExecutionContext?.Id ?? activityExecutionContext.WorkflowExecutionContext.Id;
-
-        outputName ??= DefaultOutputName;
-
-        // Inspect the output descriptor to see if the specified output name matches any PropertyInfo's name.
-        // If so, use that descriptor's name instead.
-        var outputDescriptor = activityExecutionContext.ActivityDescriptor.Outputs.FirstOrDefault(x => x.PropertyInfo?.Name == outputName);
-
-        if (outputDescriptor != null)
-            outputName = outputDescriptor.Name;
+        outputName = NormalizeOutputName(activityExecutionContext, outputName);
 
         var record = new ActivityOutputRecord(containerId, activityId, activityInstanceId, outputName, outputValue);
 
@@ -98,4 +90,16 @@ public class ActivityOutputRegister
 
     private string CreateActivityIdLookupKey(string activityId, string? outputName) => $"{activityId}:{outputName ?? DefaultOutputName}";
     private string CreateActivityInstanceIdLookupKey(string activityInstanceId, string? outputName) => $"{activityInstanceId}:{outputName ?? DefaultOutputName}";
+
+    /// <summary>
+    /// Normalizes an output name using descriptor metadata.
+    /// </summary>
+    public static string NormalizeOutputName(ActivityExecutionContext activityExecutionContext, string? outputName)
+    {
+        outputName ??= DefaultOutputName;
+
+        // If a property name was provided, resolve it to descriptor output name.
+        var outputDescriptor = activityExecutionContext.ActivityDescriptor.Outputs.FirstOrDefault(x => x.PropertyInfo?.Name == outputName);
+        return outputDescriptor?.Name ?? outputName;
+    }
 }

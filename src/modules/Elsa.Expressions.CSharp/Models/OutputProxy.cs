@@ -36,6 +36,22 @@ public class OutputProxy
     public T? From<T>(string activityIdOrName, string? outputName = null) => From(activityIdOrName, outputName).ConvertTo<T>();
 
     /// <summary>
+    /// Gets the formatted value of the specified output from the specified activity.
+    /// </summary>
+    /// <param name="activityIdOrName">The ID or name of the activity that produced the output.</param>
+    /// <param name="outputName">The name of the output.</param>
+    /// <returns>The formatted output value.</returns>
+    public object? FormattedFrom(string activityIdOrName, string outputName) => From(activityIdOrName, $"{outputName}Formatted");
+
+    /// <summary>
+    /// Gets the formatted value of the specified output from the specified activity.
+    /// </summary>
+    /// <param name="activityIdOrName">The ID or name of the activity that produced the output.</param>
+    /// <param name="outputName">The name of the output.</param>
+    /// <returns>The formatted output value.</returns>
+    public T? FormattedFrom<T>(string activityIdOrName, string outputName) => FormattedFrom(activityIdOrName, outputName).ConvertTo<T>();
+
+    /// <summary>
     /// Gets the value of the specified output.
     /// </summary>
     /// <param name="activityIdOrName">The ID or name of the activity that produced the output.</param>

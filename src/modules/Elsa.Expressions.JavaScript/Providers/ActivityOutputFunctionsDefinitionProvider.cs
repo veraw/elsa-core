@@ -28,10 +28,15 @@ internal class ActivityOutputFunctionsDefinitionProvider(IActivityRegistryLookup
         await foreach (var (activity, activityDescriptor) in activitiesWithOutputs)
         {
             definitions.AddRange(from output in activityDescriptor.Outputs.Where(x => x.Name.IsValidVariableName())
-                select output.Name.Pascalize()
-                into outputPascalName
                 let activityNamePascalName = activity.Name!.Pascalize()
-                select CreateFunctionDefinition(builder => builder.Name($"get{outputPascalName}From{activityNamePascalName}").ReturnType("any")));
+                let outputPascalName = output.Name.Pascalize()
+                let formattedOutputPascalName = $"{outputPascalName}Formatted"
+                from functionName in new[]
+                {
+                    $"get{outputPascalName}From{activityNamePascalName}",
+                    $"get{formattedOutputPascalName}From{activityNamePascalName}"
+                }
+                select CreateFunctionDefinition(builder => builder.Name(functionName).ReturnType("any")));
         }
 
         return definitions;

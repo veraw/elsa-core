@@ -773,11 +773,43 @@ public partial class ActivityExecutionContext : IExecutionContext, IDisposable
     /// <param name="outputName">The name of the output.</param>
     public void Set(Output? output, object? value, [CallerArgumentExpression("output")] string? outputName = null)
     {
+        var activityOutputTransformationService = GetService<IActivityOutputTransformationService>();
+        var resolvedOutputName = ResolveOutputName(outputName);
+        var outputDescriptor = ActivityDescriptor.Outputs.FirstOrDefault(x => string.Equals(x.Name, resolvedOutputName, StringComparison.OrdinalIgnoreCase));
+
         // Store the value in the expression execution memory block.
         ExpressionExecutionContext.Set(output, value);
 
-        // Also store the value in the workflow execution transient activity output register.
-        WorkflowExecutionContext.RecordActivityOutput(this, outputName, value);
+        if (outputDescriptor == null || activityOutputTransformationService == null || string.IsNullOrWhiteSpace(outputDescriptor.DefaultTransformation))
+        {
+            // Also store the value in the workflow execution transient activity output register.
+            WorkflowExecutionContext.RecordActivityOutput(this, outputName, value);
+            return;
+        }
+
+        // Native output persistence is controlled by descriptor serializability.
+        if (outputDescriptor.IsSerializable != false)
+            WorkflowExecutionContext.RecordActivityOutput(this, outputDescriptor.Name, value);
+
+        // Hybrid strategy:
+        // - native non-serializable: eagerly compute formatted output so a serializable formatted variant can be persisted.
+        // - native serializable: defer formatting to lazy retrieval.
+        if (outputDescriptor.IsSerializable == false)
+        {
+            var request = new ActivityOutputTransformationRequest(this, outputDescriptor, value, outputDescriptor.DefaultTransformation, outputDescriptor.TransformationCategory, IsLazyEvaluation: false);
+            var result = activityOutputTransformationService.TryTransformAsync(request).GetAwaiter().GetResult();
+
+            if (result.Success)
+            {
+                var transformedOutputName = activityOutputTransformationService.GetTransformedOutputName(outputDescriptor);
+                WorkflowExecutionContext.RecordActivityOutput(this, transformedOutputName, result.Value);
+            }
+        }
+    }
+
+    private string ResolveOutputName(string? outputName)
+    {
+        return ActivityOutputRegister.NormalizeOutputName(this, outputName);
     }
 
     /// <summary>

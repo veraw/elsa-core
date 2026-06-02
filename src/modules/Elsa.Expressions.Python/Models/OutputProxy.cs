@@ -32,6 +32,14 @@ public class OutputProxy
     public object? Get(string activityIdOrName, string? outputName = default) => Context.GetOutput(activityIdOrName, outputName);
 
     /// <summary>
+    /// Gets the formatted value of the specified output.
+    /// </summary>
+    /// <param name="activityIdOrName">The ID or name of the activity that produced the output.</param>
+    /// <param name="outputName">The name of the output.</param>
+    /// <returns>The formatted value of the output.</returns>
+    public object? GetFormatted(string activityIdOrName, string outputName) => Get(activityIdOrName, $"{outputName}Formatted");
+
+    /// <summary>
     /// Gets the value of the specified output.
     /// </summary>
     /// <param name="returnType">The type to convert the output value to.</param>
@@ -39,6 +47,15 @@ public class OutputProxy
     /// <param name="outputName">The name of the output.</param>
     /// <returns>The value of the output.</returns>
     public object? Get(Type returnType, string activityIdOrName, string? outputName = default) => Get(activityIdOrName, outputName).ConvertTo(returnType);
+
+    /// <summary>
+    /// Gets the formatted value of the specified output.
+    /// </summary>
+    /// <param name="returnType">The type to convert the output value to.</param>
+    /// <param name="activityIdOrName">The ID or name of the activity that produced the output.</param>
+    /// <param name="outputName">The name of the output.</param>
+    /// <returns>The formatted output value.</returns>
+    public object? GetFormatted(Type returnType, string activityIdOrName, string outputName) => Get(returnType, activityIdOrName, $"{outputName}Formatted");
     
     /// <summary>
     /// Gets the result of the last activity that executed.

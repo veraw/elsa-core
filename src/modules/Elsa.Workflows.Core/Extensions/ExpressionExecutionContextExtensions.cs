@@ -446,12 +446,44 @@ public static class ExpressionExecutionContextExtensions
             if (activity == null)
                 throw new InvalidOperationException("Activity not found.");
 
+            outputName = ActivityOutputRegister.NormalizeOutputName(activityExecutionContext, outputName);
             var outputRegister = workflowExecutionContext.GetActivityOutputRegister();
             var outputRecordCandidates = outputRegister.FindMany(activity.Id, outputName);
             var containerIds = activityExecutionContext.GetAncestors().Select(x => x.Id).ToList();
             var filteredOutputRecordCandidates = outputRecordCandidates.Where(x => containerIds.Contains(x.ContainerId));
             var outputRecord = filteredOutputRecordCandidates.FirstOrDefault();
-            return outputRecord?.Value;
+
+            if (outputRecord != null)
+                return outputRecord.Value;
+
+            // Lazy transformed output path.
+            var descriptor = activityExecutionContext.ActivityDescriptor;
+            var transformationService = activityExecutionContext.GetService<IActivityOutputTransformationService>();
+
+            if (transformationService == null || string.IsNullOrWhiteSpace(outputName))
+                return null;
+
+            var sourceOutput = descriptor.Outputs.FirstOrDefault(x => string.Equals(transformationService.GetTransformedOutputName(x), outputName, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(x.DefaultTransformation));
+
+            if (sourceOutput == null)
+                return null;
+
+            var nativeOutputRecords = outputRegister.FindMany(activity.Id, sourceOutput.Name);
+            var scopedNativeOutputRecords = nativeOutputRecords.Where(x => containerIds.Contains(x.ContainerId));
+            var nativeOutputRecord = scopedNativeOutputRecords.FirstOrDefault();
+
+            if (nativeOutputRecord == null)
+                return null;
+
+            var request = new ActivityOutputTransformationRequest(activityExecutionContext, sourceOutput, nativeOutputRecord.Value, sourceOutput.DefaultTransformation, sourceOutput.TransformationCategory, IsLazyEvaluation: true);
+            var transformationResult = transformationService.TryTransformAsync(request).GetAwaiter().GetResult();
+
+            if (!transformationResult.Success)
+                return null;
+
+            var transformedOutputName = transformationService.GetTransformedOutputName(sourceOutput);
+            workflowExecutionContext.RecordActivityOutput(activityExecutionContext, transformedOutputName, transformationResult.Value);
+            return transformationResult.Value;
         }
 
         /// <summary>
