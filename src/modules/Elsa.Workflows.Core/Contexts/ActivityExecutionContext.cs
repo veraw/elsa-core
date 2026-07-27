@@ -773,6 +773,7 @@ public partial class ActivityExecutionContext : IExecutionContext, IDisposable
     /// <param name="outputName">The name of the output.</param>
     public void Set(Output? output, object? value, [CallerArgumentExpression("output")] string? outputName = null)
     {
+        value = ConvertOutputBindingValueIfNeeded(output, value, outputName);
         var activityOutputTransformationService = GetService<IActivityOutputTransformationService>();
         var resolvedOutputName = ResolveOutputName(outputName);
         var outputDescriptor = ActivityDescriptor.Outputs.FirstOrDefault(x => string.Equals(x.Name, resolvedOutputName, StringComparison.OrdinalIgnoreCase));
@@ -805,6 +806,27 @@ public partial class ActivityExecutionContext : IExecutionContext, IDisposable
                 WorkflowExecutionContext.RecordActivityOutput(this, transformedOutputName, result.Value);
             }
         }
+    }
+
+    private object? ConvertOutputBindingValueIfNeeded(Output? output, object? value, string? outputName)
+    {
+        if (output == null)
+            return value;
+
+        if (!ExpressionExecutionContext.TryGetBlock(output.MemoryBlockReference(), out var outputMemoryBlock))
+            return value;
+
+        if (outputMemoryBlock.Metadata is not VariableBlockMetadata variableMetadata)
+            return value;
+
+        var converter = GetService<IOutputBindingValueConverter>();
+
+        if (converter == null)
+            return value;
+
+        var resolvedOutputName = ResolveOutputName(outputName);
+        var context = new OutputBindingValueConverterContext(this, output, resolvedOutputName, variableMetadata.Variable, value);
+        return converter.Convert(context);
     }
 
     private string ResolveOutputName(string? outputName)

@@ -221,6 +221,7 @@ public class WorkflowsFeature : FeatureBase
             .AddScoped<IActivityOutputTransformation, JArrayToDictionaryArrayOutputTransformation>()
             .AddScoped<IActivityOutputTransformationResolver, ActivityOutputTransformationResolver>()
             .AddScoped<IActivityOutputTransformationService, ActivityOutputTransformationService>()
+            .AddScoped<IOutputBindingValueConverter, DefaultOutputBindingValueConverter>()
             .AddSingleton<IPropertyDefaultValueResolver, PropertyDefaultValueResolver>()
             .AddSingleton<IPropertyUIHandlerResolver, PropertyUIHandlerResolver>()
             .AddSingleton<IActivityFactory, ActivityFactory>()

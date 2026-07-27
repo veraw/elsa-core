@@ -133,6 +133,7 @@ public class WorkflowsFeature : IShellFeature
             .AddSingleton<IActivityDescriber, ActivityDescriber>()
             .AddSingleton<IActivityRegistry, ActivityRegistry>()
             .AddScoped<IActivityRegistryLookupService, ActivityRegistryLookupService>()
+            .AddScoped<IOutputBindingValueConverter, DefaultOutputBindingValueConverter>()
             .AddSingleton<IPropertyDefaultValueResolver, PropertyDefaultValueResolver>()
             .AddSingleton<IPropertyUIHandlerResolver, PropertyUIHandlerResolver>()
             .AddSingleton<IActivityFactory, ActivityFactory>()
